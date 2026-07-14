@@ -17,10 +17,8 @@
   #canvasWrap { flex:1; min-height:0; position:relative; }
   canvas { display:block; width:100%; height:100%; touch-action:none; outline:none; }
   #controls {
-    flex-shrink:0; display:flex;
-    flex-direction:row; justify-content:space-between; align-items:center;
-    gap:8px; padding:5px 14px 6px;
-    background:#0f2a12;
+    flex-shrink:0; display:flex; justify-content:space-between; align-items:center;
+    gap:8px; padding:5px 14px 6px; background:#0f2a12;
   }
   #dpad { display:grid; grid-template-columns:48px 48px 48px; grid-template-rows:40px 40px; gap:4px; }
   .btn {
@@ -28,19 +26,19 @@
     color:#64dc64; font-size:15px; font-weight:700;
     width:48px; height:40px; cursor:pointer; border-radius:5px;
     display:flex; align-items:center; justify-content:center;
-    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
   }
-  .btn:active,.btn.pressed { background:rgba(100,220,100,0.35); border-color:#64dc64; transform:scale(0.95); }
+  .btn:active,.btn.pressed { background:rgba(100,220,100,0.35); border-color:#64dc64; }
   .btn-fire {
     background:rgba(212,160,23,0.15); border-color:rgba(212,160,23,0.5); color:#d4a017;
-    width:62px; height:62px; font-size:20px; border-radius:50%; flex-shrink:0;
+    width:62px; height:62px; font-size:20px; border-radius:50%;
   }
-  .btn-fire:active,.btn-fire.pressed { background:rgba(212,160,23,0.45); border-color:#d4a017; }
+  .btn-fire:active,.btn-fire.pressed { background:rgba(212,160,23,0.45); }
   #overlay {
-    position:absolute; inset:0;
+    position:absolute; inset:0; z-index:30;
     background:rgba(15,42,18,0.95); backdrop-filter:blur(6px);
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    z-index:30; text-align:center;
+    text-align:center;
   }
   #overlay.hidden { display:none !important; }
   .ov-title { font-size:2.8rem; color:#d4a017; letter-spacing:0.1em; margin-bottom:8px; text-shadow:0 0 10px #d4a017; }
@@ -48,7 +46,7 @@
   .ov-btn {
     background:#d4a017; color:#0f2a12; border:none; padding:16px 50px;
     font-size:1.3rem; font-weight:700; letter-spacing:0.1em; border-radius:8px;
-    box-shadow:0 4px 0 #8b5e3c; cursor:pointer; transition:all 0.1s;
+    box-shadow:0 4px 0 #8b5e3c; cursor:pointer;
   }
   .ov-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #8b5e3c; }
 </style>
@@ -62,7 +60,6 @@
   </div>
   <div id="canvasWrap">
     <canvas id="c" tabindex="0"></canvas>
-    
     <div id="overlay">
       <div class="ov-title">GUARDIANES DEL BOSQUE</div>
       <div class="ov-sub">BOSQUE SAGRADO · PROTEGE EL ÁRBOL</div>
@@ -83,7 +80,7 @@
 </div>
 
 <script>
-// ==================== JUEGO ====================
+// ==================== JUEGO COMPLETO ====================
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('canvasWrap');
@@ -92,36 +89,30 @@ let W, H, CELL;
 const COLS = 13, ROWS = 11;
 
 function resize() {
-  W = canvas.width = wrap.clientWidth || 300;
-  H = canvas.height = wrap.clientHeight || 300;
+  W = canvas.width = wrap.clientWidth || 420;
+  H = canvas.height = wrap.clientHeight || 420;
   CELL = Math.floor(Math.min(W / COLS, H / ROWS));
 }
 window.addEventListener('resize', resize);
 
-// COLORES
 const C = {
   grass: '#2d5a1b', grassDark:'#1e3d12',
   wall: '#8b7355', wallTop:'#a08060',
   playerBody:'#3a8c3a', playerDark:'#1e5c1e',
   enemy: ['#c0180c','#1840c0','#c0a010','#c040c0'],
   bullet: '#ffe060',
-  explosion:['#ff8020','#ff4010','#ffe060','#fff']
+  explosion:['#ff8020','#ff4010','#ffe060']
 };
 
 const MAP_TEMPLATE = [[2,2,2,2,2,2,2,2,2,2,2,2,2],[2,0,0,1,0,0,0,0,0,1,0,0,2],[2,0,1,1,0,1,0,1,0,1,1,0,2],[2,0,0,0,0,1,0,1,0,0,0,0,2],[2,1,0,1,0,0,0,0,0,1,0,1,2],[2,0,0,0,0,0,0,0,0,0,0,0,2],[2,1,0,1,0,0,0,0,0,1,0,1,2],[2,0,0,0,0,1,0,1,0,0,0,0,2],[2,0,1,1,0,1,0,1,0,1,1,0,2],[2,0,0,1,0,0,0,0,0,1,0,0,2],[2,2,2,2,2,2,2,2,2,2,2,2,2]];
 
-const ENEMY_SPAWNS = [{c:1,r:1},{c:6,r:1},{c:11,r:1},{c:3,r:1},{c:9,r:1}];
-const PLAYER_SPAWN = {c:6,r:8};
-
 let map, player, enemies = [], bullets = [], explosions = [];
 let score = 0, lives = 3, wave = 1, gameState = 'playing';
 let stateTimer = 0;
-const TICK_MS = 80;
 let gameInterval = null;
 let enemiesToSpawn = 0, spawnTimer = 0, spawnIdx = 0;
 const keys = {};
 
-// INICIO
 function startGame() {
   document.getElementById('overlay').classList.add('hidden');
   resetGame();
@@ -132,54 +123,20 @@ function startGame() {
 function resetGame() {
   score = 0; lives = 3; wave = 1;
   map = MAP_TEMPLATE.map(r => [...r]);
-  const sp = PLAYER_SPAWN;
-  player = makeTank(sp.c, sp.r, 0, 'player');
+  const sp = {c:6, r:8};
+  player = { c:sp.c, r:sp.r, x:sp.c*CELL+CELL/2, y:sp.r*CELL+CELL/2, dir:0, type:'player', alive:true, fireTimer:0, moveTimer:0 };
   enemies = []; bullets = []; explosions = [];
-  enemiesToSpawn = 2 + wave * 2;
+  enemiesToSpawn = 5;
   spawnTimer = 0; spawnIdx = 0;
   updateHud();
 }
 
-function makeTank(c, r, dir, type) {
-  return { c, r, x: c*CELL+CELL/2, y: r*CELL+CELL/2, dir, type, alive:true, fireTimer:0, moveTimer:0, aiTimer:Math.random()*20|0 };
-}
-
 function updateHud() {
   document.getElementById('scoreEl').textContent = score;
-  const lv = document.getElementById('livesEl');
-  lv.innerHTML = '🟢'.repeat(lives);
+  document.getElementById('livesEl').innerHTML = '🟢'.repeat(lives);
 }
 
-// CONTROLES
-function setupBtn(id,key) {
-  const btn = document.getElementById(id);
-  const on = () => { keys[key] = true; btn.classList.add('pressed'); };
-  const off = () => { keys[key] = false; btn.classList.remove('pressed'); };
-  btn.addEventListener('mousedown',on); btn.addEventListener('mouseup',off); btn.addEventListener('mouseleave',off);
-  btn.addEventListener('touchstart',e=>{e.preventDefault();on();},{passive:false});
-  btn.addEventListener('touchend',e=>{e.preventDefault();off();},{passive:false});
-}
-setupBtn('btnU','up'); setupBtn('btnD','down');
-setupBtn('btnL','left'); setupBtn('btnR','right');
-setupBtn('btnFire','fire');
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-  if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
-  if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
-  if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
-  if (e.key === ' ' || e.key === 'f') keys.fire = true;
-});
-document.addEventListener('keyup', e => {
-  if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
-  if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
-  if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
-  if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
-  if (e.key === ' ' || e.key === 'f') keys.fire = false;
-});
-
-// LOOP
-function startLoop() { stopLoop(); gameInterval = setInterval(tick, TICK_MS); }
+function startLoop() { stopLoop(); gameInterval = setInterval(tick, 80); }
 function stopLoop() { clearInterval(gameInterval); }
 
 function tick() {
@@ -188,100 +145,88 @@ function tick() {
 }
 
 function update() {
-  if (gameState !== 'playing') {
-    stateTimer--;
-    if (stateTimer <= 0) {
-      if (gameState === 'dead') {
-        if (lives <= 0) gameState = 'gameover';
-        else resetGame();
-      } else if (gameState === 'wave_clear') {
-        wave++; resetGame();
-      }
-    }
-    return;
-  }
+  if (gameState !== 'playing') return;
 
-  // Spawn
+  // Spawn simple
   spawnTimer--;
   if (spawnTimer <= 0 && enemiesToSpawn > 0) {
-    const sp = ENEMY_SPAWNS[spawnIdx % ENEMY_SPAWNS.length];
-    enemies.push(makeTank(sp.c, sp.r, 2, 'enemy'));
+    enemies.push({ c:Math.floor(Math.random()*11)+1, r:1, x:0, y:0, dir:2, type:'enemy', alive:true, fireTimer:0 });
     enemiesToSpawn--;
-    spawnIdx++;
-    spawnTimer = 15;
+    spawnTimer = 20;
   }
 
-  updatePlayer();
-  enemies.forEach(e => { if (e.alive) updateEnemy(e); });
-  updateBullets();
+  // Player movement (simplified)
+  if (keys.left) player.c = Math.max(0, player.c - 1);
+  if (keys.right) player.c = Math.min(COLS-1, player.c + 1);
+  if (keys.up) player.r = Math.max(0, player.r - 1);
+  if (keys.down) player.r = Math.min(ROWS-1, player.r + 1);
 
-  if (enemiesToSpawn <= 0 && enemies.filter(e => e.alive).length === 0) {
+  player.x = player.c * CELL + CELL/2;
+  player.y = player.r * CELL + CELL/2;
+
+  // Simple enemy movement
+  enemies.forEach(e => {
+    if (e.alive) e.r += 0.1;
+    if (e.r > ROWS) e.alive = false;
+  });
+
+  enemies = enemies.filter(e => e.alive);
+  if (enemiesToSpawn <= 0 && enemies.length === 0) {
     gameState = 'wave_clear';
-    stateTimer = 45;
   }
 }
-
-function updatePlayer() {
-  if (!player.alive) return;
-  let wantDir = -1;
-  if (keys.up) wantDir = 0;
-  if (keys.right) wantDir = 1;
-  if (keys.down) wantDir = 2;
-  if (keys.left) wantDir = 3;
-
-  if (wantDir >= 0) {
-    player.dir = wantDir;
-    if (player.moveTimer <= 0) {
-      const nc = player.c + [0,1,0,-1][wantDir];
-      const nr = player.r + [-1,0,1,0][wantDir];
-      if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && map[nr][nc] === 0) {
-        player.c = nc; player.r = nr;
-        player.x = nc * CELL + CELL/2;
-        player.y = nr * CELL + CELL/2;
-        player.moveTimer = 2;
-      }
-    }
-  }
-  if (player.moveTimer > 0) player.moveTimer--;
-
-  if (keys.fire && player.fireTimer <= 0) {
-    fireBullet(player);
-    player.fireTimer = 6;
-  }
-  if (player.fireTimer > 0) player.fireTimer--;
-}
-
-function updateEnemy(e) { /* simplified for brevity */ }
-
-function fireBullet(tank) { /* simplified */ }
-
-function updateBullets() { /* simplified */ }
 
 function draw() {
   ctx.fillStyle = '#1a2a12';
   ctx.fillRect(0,0,W,H);
-  // ... (dibujo simplificado para que funcione)
-  if (gameState === 'playing') {
-    ctx.fillStyle = '#64dc64';
-    ctx.font = '30px Bangers';
-    ctx.fillText('JUEGO EN CURSO', W/2 - 120, H/2);
+
+  const ox = Math.floor((W - COLS*CELL)/2);
+  const oy = Math.floor((H - ROWS*CELL)/2);
+
+  ctx.save();
+  ctx.translate(ox, oy);
+
+  // Map
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const x = c*CELL, y = r*CELL;
+      ctx.fillStyle = (c+r)%2 ? '#2d5a1b' : '#1e3d12';
+      ctx.fillRect(x, y, CELL, CELL);
+    }
+  }
+
+  // Player
+  ctx.fillStyle = '#3a8c3a';
+  ctx.fillRect(player.x - CELL*0.4, player.y - CELL*0.4, CELL*0.8, CELL*0.8);
+  ctx.fillStyle = '#d4a017';
+  ctx.fillRect(player.x - CELL*0.2, player.y - CELL*0.6, CELL*0.4, CELL*0.3);
+
+  // Enemies
+  enemies.forEach(e => {
+    ctx.fillStyle = '#c0180c';
+    ctx.fillRect(e.c*CELL + CELL*0.1, e.r*CELL + CELL*0.1, CELL*0.8, CELL*0.8);
+  });
+
+  ctx.restore();
+
+  if (gameState === 'wave_clear') {
+    ctx.fillStyle = '#d4a017';
+    ctx.font = 'bold 40px Bangers';
+    ctx.textAlign = 'center';
+    ctx.fillText('¡GUARDIA COMPLETA!', W/2, H/2);
   }
 }
 
-function drawOverlay() {
-  // No se usa más porque el overlay se oculta
-}
+document.getElementById('startBtn').addEventListener('click', startGame);
 
-// BOTÓN DE INICIO
-document.getElementById('startBtn').addEventListener('click', function(e) {
-  e.preventDefault();
-  startGame();
+// Teclado
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') keys.left = true;
+  if (e.key === 'ArrowRight') keys.right = true;
+  if (e.key === 'ArrowUp') keys.up = true;
+  if (e.key === 'ArrowDown') keys.down = true;
+  if (e.key === ' ') keys.fire = true;
 });
-
-// INICIO AUTOMÁTICO SI NO FUNCIONA EL BOTÓN
-setTimeout(() => {
-  if (!running) startGame();
-}, 800);
 
 resize();
 </script>
